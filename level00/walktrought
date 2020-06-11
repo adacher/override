@@ -1,0 +1,3 @@
+En analysant le binaire avec gdb, je vois 3 puts appeller, et un printf qui me demande un password.
+Puis un scanf et ensuite une comparasion avec 0x149c avec la valeur récuperer par scanf.
+Ce qui nous lance un shell, il ne nous reste plus qu'a faire cd ../level01 && cat .pass
