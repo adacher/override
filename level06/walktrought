@@ -1,0 +1,10 @@
+Marche a suivre.
+
+Mettre comme login: coucou et dans le serial quelque chose plus grand que 5. Donc 123456
+Mettre un breakpoint sur avant le la comparaison 0x080487ba et mettre $eax a 0, pour ne pas avoir un return.
+Ensuite, on met un breakpoint a l'adresse 0x08048866 et on regarde avec quoi on compare
+x/x $epb-0x10
+et plus qu'a le traduire
+p/s (int) (adresse)
+
+on quitte, on réutilise coucou pour le login et plus qu'a mettre ce qu'on a trouver dans l'adresse

