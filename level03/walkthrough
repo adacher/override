@@ -43,7 +43,6 @@ Inside the loop in decrypt(), running p/s (char) $edx, we see that it is a bit o
 The XOR instruction is used on each character in the buffer with the result of test().
 In other words : str[i] = 2 ^ str[i];
 
-Et plus en bas de la fonction, nous voyons un strncmp avec "Congratulation!" en parametre. 
 We then see a call to strncmp() with "Congratulation" as a parameter.
 Let's create a custom function in order to find the right offset knowing that the switch cases ranges from 1 to 21.
 Which gives us 18, 322424845 - 18 = 322424827
