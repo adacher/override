@@ -1,33 +1,29 @@
-J'ai fais du reverse engenerine pour comprendre cet exercice.
+In order to solve this level, reverse engineering is required.
 
-en faisant un disas main, Avant que la fonction test sois appeller, nous voyons une grosse valeur
+Inspecting the main() in gdb, before test() is called, we notice 0x1337d00d which in decimal is 322424845.
 0x080488ca <+112>:   movl   $0x1337d00d,0x4(%esp) // 322424845
 0x080488d2 <+120>:   mov    %eax,(%esp)
 0x080488d5 <+123>:   call   0x8048747 <test>
 
-Puis en faisant un disas test, On vois que la valeur entrer et la grosse valeur sont soustraite puis une comparaison
-
+Doing a disas test(), 322424845 and the entered value are substracted and compared with 0x15.
 0x08048759 <+18>:    mov    %eax,-0xc(%ebp)
 0x0804875c <+21>:    cmpl   $0x15,-0xc(%ebp)
 
-En gros ca donne (bigValue - valueScanf) < 21
+Which gives :
+(bigValue - valueScanf) < 21
 
-Ensuite nous remarquons dans la fonction, plein de jmp. Je pense donc a une foret de if ou bien un switch
-Les cases allant de 1 a 21. Une fois rentrer dans une de ces cases (pas dans la case default).
-Nous envoyons dans la fonction decrypt (bigValue - valueScanf), si le chiffre est plus grand que 21, nous envoyons un chiffre au hasard grace a la fonction rand.
+There are a lot of jmp instructions, further research shows the use of a switch with 22 cases.
+We notice that if the result is < 21, the function decrypt() is called and takes the return value of test() as a parameter, if not, a random number is used.
 
-En faisant un disas sur la fonction decrypt
-4 lignes m'interpelles
-
+Checking the function decrypt(), 4 lines catch our attention :
 0x08048673 <+19>:    movl   $0x757c7d51,-0x1d(%ebp)
 0x0804867a <+26>:    movl   $0x67667360,-0x19(%ebp)
 0x08048681 <+33>:    movl   $0x7b66737e,-0x15(%ebp)
 0x08048688 <+40>:    movl   $0x33617c7d,-0x11(%ebp)
 
-Ce sont des chaines de characteres a decoder (hexa vers ascii) ce qui donne donc "Q}|u`sfg~sf{}|a3"
-Plus loin
-
- 0x080486c5 <+101>:   jmp    0x80486e5 <decrypt+133>
+These are ascii strings to decode (hexadecimal to ascii) which gives us : "Q}|u`sfg~sf{}|a3"
+(gdb) disas decrypt
+0x080486c5 <+101>:   jmp    0x80486e5 <decrypt+133>
 0x080486c7 <+103>:   lea    -0x1d(%ebp),%eax
 0x080486ca <+106>:   add    -0x28(%ebp),%eax
 0x080486cd <+109>:   movzbl (%eax),%eax
@@ -43,10 +39,21 @@ Plus loin
 0x080486e8 <+136>:   cmp    -0x24(%ebp),%eax
 0x080486eb <+139>:   jb     0x80486c7 <decrypt+103>
 
-Nous nous trouvons a l'interieur de la boucle. 
-en fesant un p/s (char) $edx, nous voyons que c'est un morceau du tableau "Q}|u`sfg~sf{}|a3" et que $eax contient la valeur envoyer par la fonction test.
-En gros ca donne ceci    str[i] = 2 ^ str[i];
+Inside the loop in decrypt(), running p/s (char) $edx, we see that it is a bit of "Q}|u`sfg~sf{}|a3" and that $eax contains the value returned by the function test().
+The XOR instruction is used on each character in the buffer with the result of test().
+In other words : str[i] = 2 ^ str[i];
 
-Et plus en bas de la fonction, nous voyons un strncmp avec "Congratulation!" en parametre. Pour calculer le bon offset et sachant ue le switch a 21 cases (allant de 1 a 21) nous codons une fonction pour tester les possibilités a notre place.
+Et plus en bas de la fonction, nous voyons un strncmp avec "Congratulation!" en parametre. 
+We then see a call to strncmp() with "Congratulation" as a parameter.
+Let's create a custom function in order to find the right offset knowing that the switch cases ranges from 1 to 21.
+Which gives us 18, 322424845 - 18 = 322424827
 
-qui nous donne donc le chiffre 18 donc nous devons rentrer 322424827 et un shell s'ouvre.
+level03@OverRide:~$ ./level03 
+***********************************
+*               level03         **
+***********************************
+Password:322424827
+$ whoami
+level04
+$ cat /home/users/level04/.pass
+kgv3tkEb9h2mLkRsPkXRfc2mHbjMxQzvb2FrgKkf
