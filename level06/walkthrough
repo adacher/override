@@ -1,10 +1,61 @@
-Marche a suivre.
+The binary takes user input for a login and a serial.
 
-Mettre comme login: coucou et dans le serial quelque chose plus grand que 5. Donc 123456
-Mettre un breakpoint sur avant le la comparaison 0x080487ba et mettre $eax a 0, pour ne pas avoir un return.
-Ensuite, on met un breakpoint a l'adresse 0x08048866 et on regarde avec quoi on compare
-x/x $epb-0x10
-et plus qu'a le traduire
-p/s (int) (adresse)
+Let's use "coucou" as a login and we need a number bigger than 5 as a serial, so let's use 123456.
 
-on quitte, on réutilise coucou pour le login et plus qu'a mettre ce qu'on a trouver dans l'adresse
+Checking the function auth(), we notice a call to ptrace() and a cmp instruction afterwards.
+(gdb) disas auth
+0x080487b5 <+109>:   call   0x80485f0 <ptrace@plt>
+0x080487ba <+114>:   cmp    $0xffffffff,%eax
+0x080487bd <+117>:   jne    0x80487ed <auth+165>
+
+We need to set $eax at 0 in order to continue :
+
+(gdb) b * 0x080487ba
+Breakpoint 1 at 0x80487ba
+(gdb) r
+Starting program: /home/users/level06/level06 
+***********************************
+*               level06           *
+***********************************
+-> Enter Login: coucou
+***********************************
+***** NEW ACCOUNT DETECTED ********
+***********************************
+-> Enter Serial: 123456
+
+Breakpoint 1, 0x080487ba in auth ()
+(gdb) set $eax=0
+
+
+Further in auth(), we see :
+0x08048866 <+286>:   cmp    -0x10(%ebp),%eax
+0x08048869 <+289>:   je     0x8048872 <auth+298>
+
+Let's inspect what is at $ebp-0x10 :
+(gdb) b * 0x08048866
+Breakpoint 2 at 0x8048866
+(gdb) c
+Continuing.
+
+Breakpoint 2, 0x08048866 in auth ()
+(gdb) x/x $ebp-0x10
+0xffffd528:     0x005f1ae1
+(gdb) p/s (int) 0x005f1ae1
+$1 = 6232801
+
+Let's use it as our serial :
+
+level06@OverRide:~$ ./level06 
+***********************************
+*               level06           *
+***********************************
+-> Enter Login: coucou
+***********************************
+***** NEW ACCOUNT DETECTED ********
+***********************************
+-> Enter Serial: 6232801
+Authenticated!
+$ whoami
+level07
+$ cat /home/users/level07/.pass
+GbcPDRgsFK77LNnnuh7QyFYA2942Gp8yKj9KrWD8
